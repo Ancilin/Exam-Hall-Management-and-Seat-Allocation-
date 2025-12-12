@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teacher Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* CSS based on stable fixes */
+        .exam-card {
+            transition: transform 0.2s;
+        }
+        .exam-card:hover {
+            transform: translateY(-5px);
+        }
+        .table-hover tbody tr:hover {
+            background-color: rgba(0,123,255,0.05);
+        }
+        .student-count {
+            font-size: 0.9rem;
+            padding: 0.4rem 0.8rem;
+        }
+        .exam-time {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        .badge-outline-light {
+            color: white;
+            border: 1px solid white;
+            background-color: transparent;
+        }
+        .card-header.bg-primary {
+            background-color: #0d6efd !important;
+        }
+        .table-action-row {
+            padding-top: 15px;
+        }
+        /* Style for department list (using comma join now) */
+        .department-list {
+            font-size: 0.9rem;
+            white-space: normal; 
+        }
+        /* Ensure the main container can handle the content */
+        .container {
+            max-width: 1100px; 
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h2 class="mb-0">Welcome, {{ teacher.user.username }}</h2>
+                    <span class="badge badge-outline-light">{{ teacher.subject }}</span>
+                </div>
+            </div>
+        </div>
+        
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <h3 class="mb-4">Your Upcoming Invigilation Duties</h3>
+        
+        <div class="row row-cols-1 row-cols-md-2 g-4 mb-4">
+            {% for detail in exam_details %}
+                <div class="col">
+                    <div class="card exam-card h-100 shadow-sm">
+                        <div class="card-header bg-light">
+                            <div class="d-flex justify-content-between align-items-center">
+                                {# display_name is now the single exam name (e.g., "Business Management") #}
+                                <h5 class="mb-0">{{ detail.display_name }}</h5>
+                                <span class="badge bg-primary student-count">
+                                    {{ detail.total_students }} Students
+                                </span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <p class="mb-1"><strong>Date:</strong> {{ detail.date|date:"F d, Y" }}</p>
+                                <p class="mb-1"><strong>Time:</strong> 
+                                    <span class="exam-time">{{ detail.start_time|time:"H:i" }} - {{ detail.end_time|time:"H:i" }}</span>
+                                </p>
+                                <p class="mb-1"><strong>Hall:</strong> {{ detail.hall.hall_name }}</p>
+                                
+                                {# Department list uses comma join, which is appropriate when there is only one department #}
+                                <p class="mb-0"><strong>Department(s):</strong> 
+                                    <span class="department-list">{{ detail.departments|join:", " }}</span>
+                                </p>
+                            </div>
+
+                            <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
+                                <table class="table table-hover table-sm">
+                                    <thead class="table-light sticky-top">
+                                        <tr>
+                                            <th>Seat</th>
+                                            <th>Roll No</th>
+                                            <th>Student Name</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {# IMPORTANT: This loop uses the original allocation object fields #}
+                                        {% for allocation in detail.students %}
+                                            <tr>
+                                                {# Displays the allocated seat number (S1, S2, S3...) for this exam/hall #}
+                                                <td>{{ allocation.seat_number }}</td>
+                                                <td>{{ allocation.student.roll_no }}</td>
+                                                <td>{{ allocation.student.user.username }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <div class="table-action-row d-flex justify-content-between align-items-center">
+                                
+                                <div class="attendance-status">
+                                    {% if detail.attendance_marked %}
+                                        <span class="badge bg-success">Attendance Marked Today</span>
+                                    {% else %}
+                                        <a href="{% url 'exam:mark_attendance' detail.mark_attendance_exam_id detail.hall.id %}"
+                                           class="btn btn-sm btn-warning">
+                                            Mark Attendance
+                                        </a>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'exam:download_attendance' detail.mark_attendance_exam_id detail.hall.id %}"
+                                       class="btn btn-sm btn-outline-success" title="Download Attendance Sheet">
+                                        Download Report
+                                    </a>
+                                    <a href="{% url 'exam:seating_plan_detail' detail.mark_attendance_exam_id detail.hall.id %}" 
+                                       class="btn btn-sm btn-outline-primary" title="View Seating Plan">
+                                        View Plan
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        You have no upcoming invigilation duties assigned.
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="text-center mb-4">
+            <form method="post" action="{% url 'exam:teacher_logout' %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger btn-lg">Logout</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

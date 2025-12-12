@@ -1,0 +1,252 @@
+{% load exam_extras %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Seating Plan Detail</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        /* Define a container that uses CSS Grid for row/column layout */
+        .seat-grid-container {
+            display: grid;
+            gap: 15px 30px; /* Vertical (row) and horizontal (column) spacing */
+            margin: 30px auto;
+            padding: 20px;
+            max-width: fit-content;
+            
+            /* FINAL VISUAL FIX: Start hidden to prevent Flicker/Wrong Layout */
+            opacity: 0; 
+            transition: opacity 0.3s ease-in;
+            
+            /* Define the number of rows based on the backend context */
+            grid-template-rows: repeat(var(--rows, 1), 1fr);
+            /* Grid columns are calculated based on the number of elements and rows */
+            grid-auto-flow: column; 
+        }
+        /* Class added by JS after correct positioning is applied */
+        .seat-grid-container.ready {
+            opacity: 1;
+        }
+
+        .seat {
+            position: relative; /* CRITICAL: Allows absolute positioning of the badge */
+            width: 150px; 
+            height: 120px; 
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            transition: transform 0.2s;
+            border: 2px solid #dee2e6;
+            padding: 5px; 
+        }
+        .seat:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .seat.occupied {
+            background-color: #e3f2fd;
+            border-color: #0d6efd;
+        }
+        .seat.empty {
+            background-color: #f8f9fa;
+            border-style: dashed;
+            color: #6c757d;
+        }
+        /* --- NEW CSS FOR SEAT LABEL DISPLAY --- */
+        .seat-label-badge {
+            position: absolute;
+            top: -10px; /* Adjust vertical position */
+            left: -10px; /* Adjust horizontal position */
+            background-color: #0d6efd; /* Primary color */
+            color: white;
+            font-size: 0.8rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            z-index: 10; 
+            min-width: 30px; 
+        }
+        /* ... (rest of your existing styles) ... */
+        .roll-no {
+            font-size: 1rem;
+            font-weight: bold;
+            color: #0d6efd; 
+        }
+        .student-name {
+            font-size: 0.9rem;
+            color: #343a40;
+            line-height: 1.1;
+        }
+        .exam-info {
+            font-size: 0.7rem;
+            margin-top: 3px;
+            padding: 2px 5px;
+            cursor: pointer; 
+        }
+        .legend-box {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            border-radius: 4px;
+        }
+        /* Style for the old, compact information block */
+        .old-design-info-block {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            padding: 15px 0;
+            /* Remove border-bottom to match the simplified design */
+        }
+        .old-design-info-block p {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        
+        {# --- HEADER BLOCK (Old Design Style) --- #}
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">{{ exam.combined_name|default:exam.exam_name }}</h4>
+                    <span>{{ exam.date|date:"F d, Y" }}</span>
+                </div>
+            </div>
+            <div class="card-body">
+                
+                {# The core info block designed to match the old format #}
+                <div class="old-design-info-block">
+                    {# Column 1: Exam & Time #}
+                    <div>
+                        <p><strong>Exam:</strong> {{ exam.exam_name }}</p>
+                        <p><strong>Time:</strong> {{ exam.start_time }} - {{ exam.end_time }}</p>
+                    </div>
+
+                    {# Column 2: Hall & Departments #}
+                    <div>
+                        <p><strong>Hall Capacity:</strong> {{ hall.capacity }} ({{ hall.rows }}R x {{ hall.columns }}C)</p>
+                        <p>
+                            <strong>Department(s):</strong> 
+                            {% if involved_departments %}
+                                {{ involved_departments|join:", " }}
+                            {% else %}
+                                {% with dept=exam.department.all.first %}
+                                    {{ dept.name|default:"N/A" }}
+                                {% endwith %}
+                            {% endif %}
+                        </p>
+                    </div>
+
+                    {# Column 3: Invigilator Details (FIXED to use string variables) #}
+                    <div>
+                        <p><strong>Lead Invigilator:</strong> {{ invigilator|default:"N/A" }}</p>
+                        <p><strong>Subject:</strong> {{ invigilator_subject|default:"N/A" }}</p>
+                    </div>
+                </div>
+
+                {# Legend below the info block #}
+                <div class="d-flex mt-3">
+                    <div class="legend-item d-flex align-items-center me-3">
+                        <div class="legend-box" style="background-color: #e3f2fd; border: 2px solid #0d6efd;"></div>
+                        <span>Occupied Seat</span>
+                    </div>
+                    <div class="legend-item d-flex align-items-center">
+                        <div class="legend-box" style="background-color: #f8f9fa; border: 2px dashed #dee2e6;"></div>
+                        <span>Empty Seat</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">Seating Arrangement ({{ hall.hall_name }})</h5>
+                
+                {# --- Seat Grid Rendering Area --- #}
+                <div class="seat-grid-container" id="seat-grid" style="--rows: {{ hall.rows }}; --cols: {{ hall.columns }};"> 
+                    
+                    {% for seat in all_seats %}
+                        
+                        {% if seat.type == "occupied" %} 
+                            <div class="seat occupied" 
+                                data-row="{{ seat.row_pos }}" data-col="{{ seat.col_pos }}">
+                                
+                                <span class="seat-label-badge">{{ seat.seat_number }}</span> 
+                                
+                                <div class="roll-no">{{ seat.roll_no }}</div>
+                                <div class="student-name">{{ seat.student_name }}</div>
+                                <span class="exam-info badge bg-secondary" 
+                                        data-bs-toggle="tooltip" data-bs-placement="bottom" 
+                                        title="{{ seat.exam_name }}">
+                                    {{ seat.exam_name|truncatechars:15 }}
+                                </span>
+                            </div>
+                        {% else %}
+                            <div class="seat empty" 
+                                data-row="{{ seat.row_pos }}" data-col="{{ seat.col_pos }}">
+                                
+                                <span class="seat-label-badge">{{ seat.seat_number }}</span>
+                                
+                                Empty Seat
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mb-4 shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">Export Options</h5>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-primary" onclick="window.print()">
+                        Print Seating Plan
+                    </button>
+                    <a href="#" class="btn btn-success disabled" title="Export functionality is not yet implemented">
+                        Download Excel
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mb-4">
+            <a href="{% url 'exam:all_seating_plans' exam.id %}" class="btn btn-secondary">
+                Back to All Seating Plans
+            </a>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const gridContainer = document.getElementById('seat-grid');
+            
+            // 1. Apply explicit grid position (Column-Major)
+            document.querySelectorAll('.seat[data-row], .seat[data-col]').forEach(function(el) {
+                var r = el.getAttribute('data-row');
+                var c = el.getAttribute('data-col');
+                
+                // This places elements based on their calculated row and column attributes
+                if (r) el.style.gridRowStart = r;
+                if (c) el.style.gridColumnStart = c;
+            });
+
+            // 2. Make the grid visible only after positioning is complete
+            gridContainer.classList.add('ready');
+
+            // 3. Initialize Bootstrap Tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+                    return new bootstrap.Tooltip(tooltipTriggerEl)
+                }
+            })
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

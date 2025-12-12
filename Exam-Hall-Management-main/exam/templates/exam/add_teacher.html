@@ -1,0 +1,164 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Teacher</title>
+    <style>
+        body { 
+            font-family: sans-serif; 
+            margin: 2rem; 
+            background-color: #f4f7f6; /* Light background similar to your student page */
+        }
+        .container { 
+            max-width: 600px; /* Adjust max-width as needed */
+            margin: auto; 
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: #333;
+        }
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            margin-bottom: 2rem; /* Space between sections */
+        }
+        .card h2 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            color: #555;
+            font-size: 1.5rem;
+        }
+        .form-field { 
+            margin-bottom: 1.5rem; 
+        }
+        .form-field label { 
+            display: block; 
+            margin-bottom: 0.5rem; 
+            font-weight: bold; 
+            color: #333;
+        }
+        input[type="text"], 
+        input[type="password"], 
+        input[type="file"], 
+        select {
+            padding: 12px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            width: 100%; 
+            box-sizing: border-box; 
+            background-color: #fcfcfc;
+        }
+        input[type="file"] {
+            border: 1px solid #ddd; /* Ensure file input also has a border */
+        }
+        .btn { 
+            padding: 12px 25px; 
+            text-decoration: none; 
+            color: white; 
+            border: none; 
+            cursor: pointer; 
+            border-radius: 6px; 
+            font-size: 1rem;
+            width: 100%; /* Make buttons full width */
+            text-align: center;
+            display: block; /* Ensure block-level for full width */
+        }
+        .btn-primary { 
+            background-color: #007bff; /* Blue for individual add */
+        }
+        .btn-success {
+            background-color: #28a745; /* Green for upload, similar to student page */
+        }
+        .btn-secondary { 
+            background-color: #6c757d; /* Grey for back button */
+            margin-top: 1.5rem; /* Space above back button */
+            width: auto; /* Back button can be natural width */
+            display: inline-block; /* Allow it to be inline if needed */
+        }
+        p.helptext { 
+            margin-top: 0.5rem; 
+            font-size: 0.85rem; 
+            color: #666; 
+        }
+        .errorlist { 
+            color: red; 
+            list-style-type: none; 
+            padding: 0; 
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+        }
+        .text-muted {
+            color: #6c757d;
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+        }
+        .form-actions {
+            text-align: center; /* Center the back button */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Add New Teacher</h1>
+
+        <div class="card">
+            <h2>Add Individual Teacher</h2>
+            <form method="post" action="">
+                {% csrf_token %}
+                
+                {% for field in individual_form %}
+                    <div class="form-field">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}:</label>
+                        {{ field }}
+                        {% if field.help_text %}<p class="helptext">{{ field.help_text|safe }}</p>{% endif %}
+                        {% for error in field.errors %}<p class="errorlist">{{ error }}</p>{% endfor %}
+                    </div>
+                {% endfor %}
+                
+                <button type="submit" name="add_individual" class="btn btn-primary">Add Teacher</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>Upload Teachers via Excel/CSV</h2>
+            <p class="text-muted">
+                Upload a file with columns: <strong>employee_id, username, password, department, subject</strong>.
+                Department names must match existing entries.
+            </p>
+            <form method="post" action="" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                {% for field in upload_form %}
+                    <div class="form-field">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}:</label>
+                        {{ field }}
+                        {% if field.help_text %}<p class="helptext">{{ field.help_text|safe }}</p>{% endif %}
+                        {% for error in field.errors %}<p class="errorlist">{{ error }}</p>{% endfor %}
+                    </div>
+                {% endfor %}
+                
+                {% if upload_form.non_field_errors %}
+                    <ul class="errorlist">
+                        {% for error in upload_form.non_field_errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+                
+                <button type="submit" name="upload_excel" class="btn btn-success">Upload Teachers</button>
+            </form>
+        </div>
+
+        <div class="form-actions">
+            <a href="{% url 'exam:manage_teachers' %}" class="btn btn-secondary">Back to List</a>
+        </div>
+    </div>
+</body>
+</html>

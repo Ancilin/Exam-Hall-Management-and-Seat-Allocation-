@@ -1,0 +1,248 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Seat Allocation</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* ... (Your existing styles) ... */
+        body {
+            background-color: #f8f9fa;
+        }
+        .alert-danger-custom {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-color: #f5c6cb;
+        }
+        .alert-success-custom {
+            background-color: #d4edda;
+            color: #155724;
+            border-color: #c3e6cb;
+        }
+        .required label::after {
+            content: " *";
+            color: red;
+        }
+        .hall-checkbox-container {
+            padding: 8px 10px;
+            margin-bottom: 5px;
+            border: 1px solid #ccc; 
+            border-radius: 4px;
+            transition: background-color 0.2s;
+            cursor: pointer; 
+        }
+        .hall-checkbox-container:hover {
+            background-color: #e9ecef;
+        }
+        .checkbox-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .main-header-flex {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+        /* Style for selected hall to give visual feedback */
+        .hall-checkbox-container input:checked + span {
+            font-weight: bold;
+            color: #0d6efd; /* Bootstrap primary color */
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+
+        <div class="main-header-flex">
+            <h2 class="mb-0">Seat Allocation</h2>
+            <a href="{% url 'exam:admin_dashboard' %}" class="btn btn-secondary">Back to Dashboard</a>
+        </div>
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert {% if 'error' in message.tags %}alert-danger-custom{% else %}alert-success-custom{% endif %} mb-4" role="alert">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <div class="row g-4">
+            
+            <div class="col-lg-8">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white">
+                        <h4 class="mb-0">Create New Allocation</h4>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="">
+                            {% csrf_token %} 
+                            
+                            <div class="mb-4 required">
+                                <label for="{{ form.exam.id_for_label }}" class="form-label">Select Exam: *</label>
+                                {{ form.exam }}
+                                {% if form.exam.errors %}<div class="text-danger small">{{ form.exam.errors }}</div>{% endif %}
+                            </div>
+
+                            <div class="mb-4 required">
+                                <label class="form-label">Select Halls: *</label>
+                                
+                                <div class="checkbox-list" id="hall-checkbox-list">
+                                    {% for hall_choice in form.halls %}
+                                        <div class="col-md-5">
+                                            <label for="{{ hall_choice.id_for_label }}" class="form-check-label hall-checkbox-container w-100">
+                                                {{ hall_choice.tag }} 
+                                                <span>{{ hall_choice.choice_label }}</span>
+                                            </label>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                
+                                {% if form.halls.errors %}<div class="text-danger small">{{ form.halls.errors }}</div>{% endif %}
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary mt-3">
+                                Allocate Seats
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                <div class="card shadow-sm mt-4">
+                    <div class="card-header bg-white">
+                        <h4 class="mb-0">Recently Allocated Exams</h4>
+                    </div>
+                    <div class="card-body">
+                        {% if recent_allocations %}
+                            <ul class="list-group list-group-flush">
+                                {% for allocation in recent_allocations %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        {{ allocation.exam__exam_name }}
+                                        <a href="{% url 'exam:all_seating_plans' allocation.exam__id %}" class="btn btn-sm btn-outline-primary">View Plan</a>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p class="text-muted text-center">No recent allocations found.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">Available Exams</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if exams %}
+                            <ul class="list-unstyled">
+                                {% for exam in exams|slice:":5" %}
+                                    <li>
+                                        <strong>{{ exam.exam_name }}</strong> 
+                                        <small class="text-muted">({{ exam.enrolled_students_count }} students)</small>
+                                        <br>
+                                        <small class="text-muted">on {{ exam.date }}</small>
+                                    </li>
+                                    {% if not forloop.last %}<hr class="my-2">{% endif %}
+                                {% empty %}
+                                    <p class="text-muted">No exams available.</p>
+                                {% endfor %}
+                            </ul>
+                            <small class="text-muted">Showing up to 5 most recent exams.</small>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">Available Halls</h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            {% for hall in halls %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    {{ hall.hall_name }}
+                                    <span class="badge bg-secondary rounded-pill">{{ hall.capacity }} Seats</span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Ensure the select element ID matches the form field name
+            const examSelect = document.getElementById('id_exam'); 
+            
+            // Query all hall checkboxes by their name attribute
+            const hallCheckboxes = document.querySelectorAll('input[name="halls"]');
+
+            // Get the base URL for fetching hall data. 
+            // NOTE: You must have a Django URL named 'get_exam_halls_api'
+            const apiUrlBase = '{% url "exam:get_exam_halls_api" 0 %}';
+
+            function updateHallsForExam(examId) {
+                // 1. Uncheck all hall checkboxes first
+                hallCheckboxes.forEach(checkbox => {
+                    checkbox.checked = false;
+                });
+
+                if (!examId) {
+                    return; // Stop if the '-----------' option is selected
+                }
+                
+                // Construct the correct API URL
+                const apiUrl = apiUrlBase.replace('0', examId);
+
+                // 2. Fetch the pre-assigned halls from the API
+                fetch(apiUrl)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Failed to fetch halls from API: ' + response.statusText);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.halls) {
+                            // Convert fetched hall IDs to strings for comparison
+                            const assignedHallIds = data.halls.map(hall => String(hall.id));
+
+                            // 3. Check the checkboxes that match the assigned hall IDs
+                            let selectedCount = 0;
+                            hallCheckboxes.forEach(checkbox => {
+                                if (assignedHallIds.includes(checkbox.value)) {
+                                    checkbox.checked = true;
+                                    selectedCount++;
+                                }
+                            });
+                            console.log(`Auto-selected ${selectedCount} halls for Exam ID ${examId}.`);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error during AJAX call:', error);
+                        alert('Could not automatically select halls. Please select manually.');
+                    });
+            }
+
+            // Event Listener: When the Exam dropdown changes
+            if (examSelect) {
+                examSelect.addEventListener('change', function() {
+                    const selectedExamId = this.value;
+                    updateHallsForExam(selectedExamId);
+                });
+
+                // Run on initial page load if an exam is already selected (e.g., from a form error or Django pre-selection)
+                if (examSelect.value) {
+                    updateHallsForExam(examSelect.value);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

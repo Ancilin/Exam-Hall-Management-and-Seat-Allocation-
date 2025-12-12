@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Exam</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .card {
+            border-radius: 1rem;
+        }
+        /* Style the hall containers for a clean, clickable box look (Keeping original hall styling) */
+        .hall-checkbox-container {
+            border: 1px solid #dee2e6;
+            border-radius: 0.5rem;
+            padding: 10px;
+            margin-top: 5px;
+            transition: background-color 0.15s;
+            cursor: pointer;
+        }
+        .hall-checkbox-container:hover {
+            background-color: #f0f0f0;
+        }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script> 
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="card shadow-lg p-4">
+            <h2 class="card-title text-center mb-4">Edit Exam ({{ exam.exam_name }})</h2>
+            <form method="post" class="needs-validation" novalidate>
+                {% csrf_token %}
+                <div class="row">
+                {% for field in form %}
+                    {# CRITICAL FIX: Skip rendering the 'is_combined' field entirely #}
+                    {% if field.name == 'is_combined' %}
+                        {# Do nothing; the field is completely skipped #}
+                    {% else %}
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                            
+                            {# --- Conditional rendering for Halls --- #}
+                            {% if field.name == 'halls' %}
+                                <div class="row g-2">
+                                    {% for choice in field %}
+                                        <div class="col-6"> 
+                                            <label class="form-check hall-checkbox-container w-100" for="{{ choice.id_for_label }}">
+                                                {{ choice.tag }}
+                                                {{ choice.choice_label }}
+                                            </label>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            
+                            {# --- Conditional rendering for Total Students (To DISABLE it) --- #}
+                            {% elif field.name == 'total_students' %}
+                                <input type="number" 
+                                    id="{{ field.id_for_label }}" 
+                                    name="{{ field.name }}" 
+                                    value="{{ field.value|default_if_none:0 }}" 
+                                    class="form-control" 
+                                    readonly>
+                            
+                            {# --- Standard rendering for all other fields (name, date, time, departments, etc.) --- #}
+                            {% else %}
+                                {{ field }}
+                            {% endif %}
+                            
+                            {% if field.errors %}
+                            <div class="invalid-feedback d-block">
+                                {% for error in field.errors %}{{ error }}{% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+                </div>
+                <div class="d-grid gap-2 mt-4">
+                    <button type="submit" class="btn btn-success btn-lg">Save Changes</button>
+                    <a href="{% url 'exam:manage_exams' %}" class="btn btn-secondary btn-lg">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {# --- JAVASCRIPT FIX START: Ensure student count is calculated on edit page load --- #}
+    <script>
+    $(document).ready(function() {
+        // 1. Select the department field (It's a SelectMultiple, ID is usually id_department)
+        const $departmentSelector = $('#id_department');
+        // 2. Select the Total Students input field
+        const $totalStudentsInput = $('#id_total_students');
+        
+        function updateStudentCount() {
+            const selectedDepartmentIds = $departmentSelector.val();
+            
+            if (!selectedDepartmentIds || selectedDepartmentIds.length === 0) {
+                $totalStudentsInput.val(0);
+                return;
+            }
+
+            const data = selectedDepartmentIds.map(id => `department_ids=${id}`).join('&');
+
+            $.ajax({
+                url: '{% url "exam:get_student_count" %}', 
+                type: 'GET',
+                data: data,
+                success: function(response) {
+                    $totalStudentsInput.val(response.total_students);
+                },
+                error: function() {
+                    $totalStudentsInput.val('Error');
+                }
+            });
+        }
+
+        // Attach the event handler to the department selector's change event
+        $departmentSelector.on('change', updateStudentCount);
+
+        // Crucial: Run on page load to ensure the field is populated on load/edit
+        updateStudentCount();
+    });
+    </script>
+    {# --- JAVASCRIPT FIX END --- #}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

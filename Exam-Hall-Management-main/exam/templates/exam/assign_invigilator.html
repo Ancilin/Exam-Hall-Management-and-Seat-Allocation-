@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assign Invigilators for {{ exam.exam_name }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .card {
+            border-radius: 1rem;
+        }
+        .form-select, .form-control {
+            width: 100%;
+        }
+        .invigilation-warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border-color: #ffeeba;
+        }
+        .table-hover tbody tr:hover {
+            background-color: #f0f0f0; /* Added hover state for clarity */
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h2 class="text-center mb-4">Assign Invigilators for {{ exam.exam_name }}</h2>
+        <p class="text-center text-muted">Use this page to assign a teacher to each hall for this exam.</p>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}" role="alert">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        {% if form.fields.hall.queryset|length < exam.halls.all|length %}
+            <div class="alert invigilation-warning text-center">
+                ⚠️ **Warning:** The "Select Hall" list is incomplete. This usually means an invigilator has already been assigned 
+                to some halls, and they are now excluded from the dropdown. 
+                <br>
+                **Currently Assignable Halls:** {{ form.fields.hall.queryset|length }} hall(s).
+            </div>
+        {% endif %}
+
+
+        <div class="card shadow-lg p-4 mb-5">
+            <h4 class="card-title text-center mb-4">New Assignment</h4>
+            <form method="post">
+                {% csrf_token %}
+                {% if form.errors %}
+                <div class="alert alert-danger" role="alert">
+                    Please correct the errors below.
+                    <ul>
+                        {% for field, errors in form.errors.items %}
+                            {% for error in errors %}
+                                <li>{{ field|title }}: {{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                <div class="mb-3">
+                    <label for="{{ form.hall.id_for_label }}" class="form-label">Select Hall:</label>
+                    {{ form.hall }}
+                </div>
+                <div class="mb-3">
+                    <label for="{{ form.teacher.id_for_label }}" class="form-label">Select Teacher:</label>
+                    {{ form.teacher }}
+                </div>
+
+                <div class="d-grid gap-2 mt-4">
+                    <button type="submit" class="btn btn-primary btn-lg">Assign Invigilator</button>
+                </div>
+            </form>
+        </div>
+
+        <h3 class="text-center mb-4">Assigned Invigilators</h3>
+        <div class="card shadow-lg">
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0">
+                    <thead class="bg-primary text-white">
+                        <tr>
+                            <th scope="col">Hall</th>
+                            <th scope="col">Invigilator (Teacher)</th>
+                            <th scope="col" class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for assignment in assigned_invigilators %}
+                        <tr>
+                            <td>{{ assignment.hall.hall_name }}</td>
+                            <td>{{ assignment.teacher.user.username }}</td>
+                            <td class="text-center">
+                                <form action="{% url 'exam:delete_invigilator_assignment' assignment.id %}" method="post" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-danger">Remove</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center text-muted py-4">No invigilators assigned yet for this exam.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="text-center mt-4">
+            <a href="{% url 'exam:manage_exams' %}" class="btn btn-secondary btn-lg">Back to Manage Exams</a>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

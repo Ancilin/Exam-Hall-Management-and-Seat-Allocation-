@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Exam Hall Management System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-color: #0d6efd;
+            --secondary-color: #198754;
+            --admin-color: #6c757d;
+            --hover-color: #ffc107;
+        }
+
+        body {
+            background-color: #f0f2f5;
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        /* --- Navbar & Header --- */
+        .navbar-brand {
+            font-weight: 700;
+        }
+        .logo-icon {
+            font-size: 80px;
+            color: var(--primary-color);
+            text-shadow: 0 0 10px rgba(13, 110, 253, 0.5);
+        }
+        .page-title {
+            font-weight: 700;
+            color: #343a40;
+        }
+
+        /* --- Portal Cards --- */
+        .card-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .card {
+            border-radius: 15px;
+            transition: transform 0.3s, box-shadow 0.3s;
+            width: 100%;
+            min-height: 350px; /* Slightly taller for visual weight */
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between; /* Space out content and button */
+            align-items: center;
+            color: #fff;
+            padding: 35px 20px;
+            border: none;
+        }
+
+        .card:hover {
+            transform: translateY(-8px); /* Lift effect */
+            box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+        }
+
+        .student-card {
+            background: linear-gradient(135deg, #00b4d8, var(--primary-color));
+        }
+
+        .teacher-card {
+            background: linear-gradient(135deg, #48c088, var(--secondary-color));
+        }
+
+        .admin-card {
+            background: linear-gradient(135deg, #495057, var(--admin-color));
+        }
+
+        .portal-icon {
+            font-size: 70px;
+            margin-bottom: 15px;
+        }
+
+        .card h3 {
+            font-weight: 600;
+        }
+
+        .card p {
+            font-size: 1rem;
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+
+        .btn-portal {
+            margin-top: auto;
+            border-radius: 50px; /* Pill button */
+            font-weight: 600;
+            padding: 10px 30px;
+        }
+
+        /* --- Stats Section (New Feature) --- */
+        .stats-box {
+            background-color: #ffffff;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            margin-top: 30px;
+        }
+        .stat-icon {
+            font-size: 30px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow-sm">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="{% url 'exam:home' %}">
+                <i class="bi bi-journal-text me-2"></i>Exam System
+            </a>
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="{% url 'exam:home' %}">Home</a></li>
+                    
+                    {% if user.is_authenticated %}
+                        {% if user.is_superuser %}
+                            <li class="nav-item"><a class="nav-link" href="{% url 'exam:admin_dashboard' %}">Admin Dashboard</a></li>
+                            <li class="nav-item"><a class="nav-link text-warning" href="{% url 'exam:admin_logout' %}"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+                        {% elif user.teacher %}
+                            <li class="nav-item"><a class="nav-link" href="{% url 'exam:teacher_dashboard' %}">Teacher Dashboard</a></li>
+                            <li class="nav-item"><a class="nav-link text-warning" href="{% url 'exam:teacher_logout' %}"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+                        {% elif user.student %}
+                            <li class="nav-item"><a class="nav-link" href="{% url 'exam:student_dashboard' %}">Student Dashboard</a></li>
+                            <li class="nav-item"><a class="nav-link text-warning" href="{% url 'exam:student_logout' %}"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+                        {% endif %}
+                    {% else %}
+                        <li class="nav-item"><a class="nav-link" href="{% url 'exam:admin_login' %}">Admin Login</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{% url 'exam:teacher_login' %}">Teacher Login</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{% url 'exam:student_login' %}">Student Login</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container text-center mt-5">
+        <i class="bi bi-journal-check logo-icon mb-3"></i>
+        <h1 class="page-title">Welcome to the Exam Hall Management System</h1>
+        <p class="lead text-muted">A dedicated platform for seamless seat allocation and invigilation.</p>
+
+        <div class="row justify-content-center stats-box my-5">
+            <h2 class="h5 mb-3 text-start text-muted">System Overview:</h2>
+            <div class="col-6 col-md-3 mb-3">
+                <div class="d-flex align-items-center justify-content-center">
+                    <i class="bi bi-people stat-icon text-primary me-2"></i>
+                    <div class="text-start">
+                        <p class="mb-0 fw-bold">{{ total_students|default:"0" }}</p>
+                        <small class="text-muted">Total Students</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3 mb-3">
+                <div class="d-flex align-items-center justify-content-center">
+                    <i class="bi bi-calendar-check stat-icon text-success me-2"></i>
+                    <div class="text-start">
+                        <p class="mb-0 fw-bold">{{ upcoming_exams|default:"0" }}</p>
+                        <small class="text-muted">Upcoming Exams</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3 mb-3">
+                <div class="d-flex align-items-center justify-content-center">
+                    <i class="bi bi-building stat-icon text-info me-2"></i>
+                    <div class="text-start">
+                        <p class="mb-0 fw-bold">{{ total_halls|default:"0" }}</p>
+                        <small class="text-muted">Available Halls</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h2 class="h3 mb-4 page-title">Choose Your Portal</h2>
+        <div class="row justify-content-center g-4 card-container pb-5">
+            
+            <div class="col-md-6 col-lg-4">
+                <div class="card admin-card shadow-lg">
+                    <i class="bi bi-lock portal-icon"></i>
+                    <h3>Admin Portal</h3>
+                    <p>Manage all students, teachers, halls, and exam allocations.</p>
+                    <a href="{% url 'exam:admin_login' %}" class="btn btn-light btn-portal">Go to Admin Portal</a>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="card teacher-card shadow-lg">
+                    <i class="bi bi-person-badge portal-icon"></i>
+                    <h3>Teacher Portal</h3>
+                    <p>View invigilation duties, mark attendance, and access reports.</p>
+                    <a href="{% url 'exam:teacher_login' %}" class="btn btn-light btn-portal">Go to Teacher Portal</a>
+                </div>
+            </div>
+            
+            <div class="col-md-6 col-lg-4">
+                <div class="card student-card shadow-lg">
+                    <i class="bi bi-person-circle portal-icon"></i>
+                    <h3>Student Portal</h3>
+                    <p>Check your personalized exam hall and seat allocation details.</p>
+                    <a href="{% url 'exam:student_login' %}" class="btn btn-light btn-portal">Go to Student Portal</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-dark text-white-50 py-3 mt-5">
+        <div class="container text-center">
+            <p class="mb-1">&copy; 2025 Exam Hall Management System</p>
+            <small></small>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
